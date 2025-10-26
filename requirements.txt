@@ -1,0 +1,5 @@
+paho-mqtt
+adafruit-blinka
+adafruit-circuitpython-dht
+picamera2
+opencv-python
