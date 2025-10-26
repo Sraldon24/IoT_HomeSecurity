@@ -1,0 +1,32 @@
+PIR Sensor (HC-SR501 or similar)
+VCC → 5 V (Pin 2)
+GND → GND (Pin 6)
+OUT → GPIO 6 (Pin 31)
+→ The PIR module outputs 3.3 V on motion → safe for Pi GPIO.
+
+LED Alarm
+Anode (+) → GPIO 16 (Pin 36)
+Cathode (–) → 220 Ω resistor → GND (Pin 14)
+→ Add a resistor or the LED may burn out.
+
+Buzzer
+Positive (+) → GPIO 26 (Pin 37)
+Negative (–) → GND (Pin 20)
+→ Works with active buzzer directly; for a passive buzzer, you’ll just hear a click (no tone).
+
+DHT 11 Temperature & Humidity Sensor
+VCC → 5 V (Pin 2)
+DATA → GPIO 4 (Pin 7)
+GND → GND (Pin 9)
+→ Optional: 10 kΩ pull-up resistor between DATA and VCC for better stability.
+
+Raspberry Pi Camera Module
+CSI ribbon cable → Raspberry Pi CSI port (silver pins facing HDMI port)
+→ Enable in Raspberry Pi Configuration → Interfaces → Camera → Enable.
+
+
+#Notes
+- All components share a **common GND**.
+- Use **BCM numbering** in your code (as configured).
+- Double-check all polarities before powering up.
+- Recommended: power the whole system via official Raspberry Pi 5V adapter (≥2.5A).

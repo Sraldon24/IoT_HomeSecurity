@@ -1,0 +1,14 @@
+{
+  "ADAFRUIT_IO_USERNAME": "sraldon24",
+  "ADAFRUIT_IO_KEY": "userkey",
+  "MQTT_BROKER": "io.adafruit.com",
+  "MQTT_PORT": 1883,
+  "MQTT_KEEPALIVE": 60,
+
+  "camera_enabled": true,
+  "security_check_interval": 5,
+  "env_interval": 30,
+  "flushing_interval": 10,
+  "capturing_interval": 5,
+  "sync_interval": 300
+}
