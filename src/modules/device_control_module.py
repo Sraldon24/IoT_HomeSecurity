@@ -9,6 +9,11 @@ logger = logging.getLogger(__name__)
 class device_control_module:
     def __init__(self, config_file='config.json'):
         self.config = load_config(config_file)
+        try:
+            devices = self.config.get('devices', ["living_room_light", "bedroom_fan"])
+            logger.info(f"Device control configured for devices: {devices}")
+        except Exception:
+            logger.debug("Device control: unable to read devices from config")
 
     def generate_device_status(self):
         devices = self.config.get('devices', ["living_room_light", "bedroom_fan"])

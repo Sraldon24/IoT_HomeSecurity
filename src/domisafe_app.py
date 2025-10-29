@@ -2,11 +2,11 @@
 import json, time, logging, os,sys, threading
 from datetime import datetime
 # make sure modules folder is importable
-sys.path.append(os.path.join(os.path.dirname(__file__), "modules"))
-from MQTT_communicator import MQTT_communicator
-from environmental_module import environmental_module
-from security_module import security_module
-from device_control_module import device_control_module
+from modules.MQTT_communicator import MQTT_communicator
+from modules.environmental_module import environmental_module
+from modules.security_module import security_module
+from modules.device_control_module import device_control_module
+from modules.config_loader import load_config
 from modules.config_loader import load_config
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -33,20 +33,65 @@ class DomiSafeApp:
         self.env_interval            = int(self.config.get("env_interval", 30))
 
         self.running = True
-        self.mqtt_agent     = MQTT_communicator(config_file)
-        self.env_data       = environmental_module(config_file)
-        self.security_data  = security_module(config_file)
-        self.device_control = device_control_module(config_file)
+        # Initialize modules with guarded diagnostics
+        try:
+            self.mqtt_agent = MQTT_communicator(config_file)
+            logger.info("MQTT communicator initialized")
+        except Exception as e:
+            logger.error(f"Failed to init MQTT_communicator: {e}", exc_info=True)
+            self.mqtt_agent = None
+
+        try:
+            self.env_data = environmental_module(config_file)
+            logger.info("Environmental module initialized")
+        except Exception as e:
+            logger.error(f"Failed to init environmental_module: {e}", exc_info=True)
+            self.env_data = None
+
+        try:
+            self.security_data = security_module(config_file)
+            logger.info("Security module initialized")
+        except Exception as e:
+            logger.error(f"Failed to init security_module: {e}", exc_info=True)
+            self.security_data = None
+
+        try:
+            self.device_control = device_control_module(config_file)
+            logger.info("Device control module initialized")
+        except Exception as e:
+            logger.error(f"Failed to init device_control_module: {e}", exc_info=True)
+            self.device_control = None
 
         self.log_dir = "logs"
         os.makedirs(self.log_dir, exist_ok=True)
+        # Wait briefly for MQTT connection to avoid initial publish drops
+        wait_secs = 8
+        logger.info(f"Waiting up to {wait_secs}s for MQTT to connect…")
+        t0 = time.time()
+        while time.time() - t0 < wait_secs and not self.mqtt_agent.mqtt_connected:
+            time.sleep(0.2)
+        if self.mqtt_agent.mqtt_connected:
+            logger.info("MQTT connected before start loop")
+        else:
+            logger.warning("Proceeding without MQTT connection (will retry in background)")
 
     def send_to_cloud(self, data: dict, feeds: dict[str, str]):
         ok_all = True
         for field, feed in feeds.items():
             if field not in data:
                 continue
-            if not self.mqtt_agent.send_to_adafruit_io(feed, data[field]):
+            value = data[field]
+            logger.debug(f"Publishing {field} -> feed '{feed}' with value={value}")
+            if not self.mqtt_agent:
+                logger.warning("MQTT agent not available - skipping publish")
+                ok_all = False
+                continue
+            try:
+                if not self.mqtt_agent.send_to_adafruit_io(feed, value):
+                    logger.debug(f"Publish failed for {feed}")
+                    ok_all = False
+            except Exception as e:
+                logger.error(f"Exception when publishing to {feed}: {e}", exc_info=True)
                 ok_all = False
             time.sleep(0.2)
         return ok_all
@@ -94,6 +139,7 @@ class DomiSafeApp:
 
             while self.running:
                 now = time.time()
+                logger.debug("Tick: collecting data")
                 self.collect_security_data(now, timers, sf)
                 self.collect_environmental_data(now, timers, ef)
 

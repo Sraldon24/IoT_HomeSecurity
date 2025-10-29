@@ -41,17 +41,19 @@ class environmental_module:
                 logger.warning(f"DHT read error: {e}; returning nulls")
         else:
             # If you prefer to simulate instead of nulls, uncomment next lines:
-            # base = 22 + 5 * math.sin(time.time() / 3600)
-            # temperature_c = round(base + random.uniform(-2, 2), 1)
-            # humidity = max(30, min(90, round(60 - (temperature_c - 20) * 2 + random.uniform(-5, 5), 1)))
-            # pressure = round(1013.25 + random.uniform(-10, 10), 2)
-            temperature_c = None
-            humidity = None
-            pressure = None
+            base = 22 + 5 * math.sin(time.time() / 3600)
+            temperature_c = round(base + random.uniform(-2, 2), 1)
+            humidity = max(30, min(90, round(60 - (temperature_c - 20) * 2 + random.uniform(-5, 5), 1)))
+            pressure = round(1013.25 + random.uniform(-10, 10), 2)
+            # temperature_c = None
+            # humidity = None
+            # pressure = None
 
-        return {
+        result = {
             'timestamp': datetime.now().isoformat(),
             'temperature': temperature_c,
             'humidity': humidity,
             'pressure': pressure
         }
+        logger.debug(f"Environmental data: {result}")
+        return result
