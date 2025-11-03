@@ -37,6 +37,7 @@ class security_module:
         self._pir = self._led = self._buzzer = self._cam = None
         self._motor = None
         self._motor_pos = self._motor_neg = None
+        self._motor_enable = None
 
         if GPIO_MODE == "adafruit":
             try:
@@ -50,6 +51,7 @@ class security_module:
                 # Motor setup
                 mpos = self.config.get("MOTOR_POS_PIN")
                 mneg = self.config.get("MOTOR_NEG_PIN")
+                men = self.config.get("MOTOR_PIN") or self.config.get("MOTOR_EN_PIN")
                 if mpos is not None and mneg is not None:
                     mpos_pin = getattr(board, f"D{int(mpos)}", None)
                     mneg_pin = getattr(board, f"D{int(mneg)}", None)
@@ -58,6 +60,13 @@ class security_module:
                         self._motor_pos.direction = digitalio.Direction.OUTPUT
                         self._motor_neg = digitalio.DigitalInOut(mneg_pin)
                         self._motor_neg.direction = digitalio.Direction.OUTPUT
+
+                # Single-pin (enable) motor control
+                if men is not None:
+                    men_pin = getattr(board, f"D{int(men)}", None)
+                    if men_pin:
+                        self._motor_enable = digitalio.DigitalInOut(men_pin)
+                        self._motor_enable.direction = digitalio.Direction.OUTPUT
 
                 if self.config.get("camera_enabled", True):
                     self._cam = Picamera2()
@@ -76,6 +85,14 @@ class security_module:
                 if mpos is not None and mneg is not None:
                     self._motor = Motor(forward=int(mpos), backward=int(mneg))
 
+                # Single-pin enable/control for motor drivers
+                men = self.config.get("MOTOR_PIN") or self.config.get("MOTOR_EN_PIN")
+                if men is not None:
+                    try:
+                        self._motor_enable = LED(int(men))
+                    except Exception:
+                        logger.warning(f"Failed to init motor enable pin via gpiozero: {men}")
+
                 if self.config.get("camera_enabled", True):
                     self._cam = Picamera2()
                     self._cam.start()
@@ -86,7 +103,7 @@ class security_module:
             "pir": bool(self._pir),
             "led": bool(self._led),
             "buzzer": bool(self._buzzer),
-            "motor": bool(self._motor or (self._motor_pos and self._motor_neg)),
+            "motor": bool(self._motor or (self._motor_pos and self._motor_neg) or self._motor_enable),
             "camera": bool(self._cam),
         }
         logger.info(f"Security hardware presence: {present}")
@@ -101,12 +118,29 @@ class security_module:
                 time.sleep(duration)
                 self._motor.stop()
 
+            # gpiozero: single enable pin
+            elif GPIO_MODE == "gpiozero" and self._motor_enable:
+                try:
+                    self._motor_enable.on()
+                    time.sleep(duration)
+                    self._motor_enable.off()
+                except Exception as e:
+                    logger.warning(f"gpiozero motor_enable failed: {e}")
+
             elif GPIO_MODE == "adafruit" and self._motor_pos and self._motor_neg:
                 self._motor_pos.value = True
                 self._motor_neg.value = False
                 time.sleep(duration)
                 self._motor_pos.value = False
                 self._motor_neg.value = False
+            # adafruit (single enable pin)
+            elif GPIO_MODE == "adafruit" and self._motor_enable:
+                try:
+                    self._motor_enable.value = True
+                    time.sleep(duration)
+                    self._motor_enable.value = False
+                except Exception as e:
+                    logger.warning(f"adafruit motor_enable failed: {e}")
             else:
                 logger.debug("No motor configured.")
         except Exception as e:
@@ -151,6 +185,8 @@ class security_module:
 
         try:
             frame = self._cam.capture_array()
+            # resize image to max 480p before saving
+            frame = cv2.resize(frame, (640, 480), interpolation=cv2.INTER_AREA)
             filename = os.path.join(self.image_dir, f"motion_{datetime.now():%Y%m%d_%H%M%S}.jpg")
             import cv2
 

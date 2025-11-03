@@ -13,55 +13,48 @@ except Exception:
     GPIO_MODE = "rpi"
 
 def main():
-    print("\n⚙️  SINGLE-DIRECTION MOTOR TEST")
+    print("\n⚙️  SINGLE-PIN MOTOR TEST")
     print("===============================")
 
     cfg = load_config("config.json")
-    pos_pin = int(cfg.get("MOTOR_POS_PIN", 20))
-    neg_pin = int(cfg.get("MOTOR_NEG_PIN", 21))
-    print(f"Using GPIO {pos_pin} (POS) and {neg_pin} (NEG) | mode={GPIO_MODE}")
+    # Use a single control pin for the motor driver (ENA/IN1, etc.)
+    motor_pin = int(cfg.get("MOTOR_PIN", cfg.get("MOTOR_POS_PIN", 20)))
+    print(f"Using GPIO {motor_pin} (SINGLE CONTROL) | mode={GPIO_MODE}")
 
     if GPIO_MODE == "adafruit":
-        pos = digitalio.DigitalInOut(getattr(board, f"D{pos_pin}"))
-        neg = digitalio.DigitalInOut(getattr(board, f"D{neg_pin}"))
-        pos.direction = digitalio.Direction.OUTPUT
-        neg.direction = digitalio.Direction.OUTPUT
+        pin = digitalio.DigitalInOut(getattr(board, f"D{motor_pin}"))
+        pin.direction = digitalio.Direction.OUTPUT
 
         def on():
-            pos.value = True
-            neg.value = False
-            logger.info("➡️  Motor ON (POS=1, NEG=0)")
+            pin.value = True
+            logger.info("➡️  Motor ON (PIN=1)")
 
         def off():
-            pos.value = False
-            neg.value = False
-            logger.info("⏹️  Motor OFF (POS=0, NEG=0)")
+            pin.value = False
+            logger.info("⏹️  Motor OFF (PIN=0)")
     else:
         GPIO.setmode(GPIO.BCM)
-        GPIO.setup(pos_pin, GPIO.OUT)
-        GPIO.setup(neg_pin, GPIO.OUT)
+        GPIO.setup(motor_pin, GPIO.OUT)
 
         def on():
-            GPIO.output(pos_pin, True)
-            GPIO.output(neg_pin, False)
-            logger.info("➡️  Motor ON (POS=1, NEG=0)")
+            GPIO.output(motor_pin, True)
+            logger.info("➡️  Motor ON (PIN=1)")
 
         def off():
-            GPIO.output(pos_pin, False)
-            GPIO.output(neg_pin, False)
-            logger.info("⏹️  Motor OFF (POS=0, NEG=0)")
+            GPIO.output(motor_pin, False)
+            logger.info("⏹️  Motor OFF (PIN=0)")
 
     try:
-        print("Turning motor ON for 2 seconds...")
+        print("Turning motor ON for 3 seconds...")
         on()
-        time.sleep(2)
+        time.sleep(3)
         off()
         if GPIO_MODE != "adafruit":
             GPIO.cleanup()
         print("✅ Test complete. If motor didn’t spin:")
-        print("   • Check driver’s EN/ENA pin is HIGH or jumper present")
-        print("   • Verify external motor power (≥ 5 V / 9–12 V)")
-        print("   • Confirm driver GND and Pi GND are connected\n")
+        print("   • Ensure driver EN/ENA (or equivalent) is connected to this control pin and pulled HIGH to enable motor")
+        print("   • Verify external motor power and common ground")
+        print("   • If using an H-bridge, the direction pins may still be required depending on wiring\n")
     except Exception as e:
         print(f"❌ Error: {e}")
         if GPIO_MODE != "adafruit":
