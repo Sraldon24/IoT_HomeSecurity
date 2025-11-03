@@ -14,7 +14,7 @@ SECURITY_FEEDS = {
     "motion_detected": "motion",
     "led_status": "led_status",
     "buzzer_status": "buzzer_status",
-    "camera_last_image": "camera_last_image",
+    "image_b64": "camera_last_image",
 }
 
 class DomiSafeApp:
@@ -84,7 +84,7 @@ class DomiSafeApp:
                 "motion_detected": 1 if sec.get("motion_detected") else 0,
                 "led_status": sec.get("led_status"),
                 "buzzer_status": sec.get("buzzer_status"),
-                "camera_last_image": sec.get("image_path"),
+                "image_b64": sec.get("image_b64"),
             }
             self.send_to_cloud(payload, SECURITY_FEEDS)
             timers['security_check'] = now
