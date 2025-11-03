@@ -23,7 +23,15 @@ class environmental_module:
         self._dht = None
         if _HAS_DHT:
             try:
-                self._dht = adafruit_dht.DHT11(board.D4, use_pulseio=False)
+                # Allow the DHT pin to be configured via config (DHT_PIN).
+                # The config value is an integer GPIO number (e.g. 4) and will be
+                # converted to the board.D{N} attribute expected by the adafruit library.
+                pin_cfg = int(self.config.get('DHT_PIN', 4))
+                board_pin = getattr(board, f"D{pin_cfg}", None)
+                if board_pin is None:
+                    # Fallback to D4 if attribute not found
+                    board_pin = getattr(board, 'D4')
+                self._dht = adafruit_dht.DHT11(board_pin, use_pulseio=False)
             except Exception as e:
                 logger.warning(f"DHT init failed, switching to null/sim mode: {e}")
                 self._dht = None

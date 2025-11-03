@@ -24,6 +24,13 @@ DEFAULTS: Dict[str, object] = {
     "flushing_interval": 10,
     "capturing_interval": 5,
     "sync_interval": 300,
+    # Hardware pin defaults (GPIO numbers for board.Dx style)
+    # DHT_PIN: GPIO number for the DHT11 data pin (will be used as board.D{N})
+    "DHT_PIN": 4,
+    # Motor pins: positive and negative wires (used to apply voltage across motor).
+    # If you don't have a motor connected, you can set these to null in config.json
+    "MOTOR_POS_PIN": 20,
+    "MOTOR_NEG_PIN": 21,
 }
 
 def load_config(path: str = "config.json", defaults: Optional[Dict[str, object]] = None) -> Dict[str, object]:
