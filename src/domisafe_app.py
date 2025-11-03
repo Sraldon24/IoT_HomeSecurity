@@ -131,8 +131,11 @@ class DomiSafeApp:
             self.security_data._set_led(False)
             self.security_data._set_buzzer(False)
             logger.info("Testing camera...")
-            path = self.security_data.capture_image()
-            logger.info(f"Camera image: {path}")
+            img = self.security_data.capture_and_encode_image()
+            if img:
+                logger.info("Camera capture OK (encoded for Adafruit)")
+            else:
+                logger.warning("Camera test failed — no image data")
         if self.env_data:
             logger.info("Testing DHT11 sensor...")
             env = self.env_data.get_environmental_data()
